@@ -93,7 +93,10 @@ $ docker compose build web
 
 ## Деплой [Kubernetes](https://kubernetes.io/) кластера с помощью [Minikube](https://minikube.sigs.k8s.io/docs/)
 
-1) Установить [`Kubectl`](https://kubernetes.io/ru/docs/tasks/tools/install-kubectl/), [`VirtualBox`](https://www.virtualbox.org/), [`Minikube`](https://kubernetes.io/ru/docs/tasks/tools/install-minikube/), [`Helm`](https://helm.sh/) запустить minikube:
+1)
+
+Установить [`Kubectl`](https://kubernetes.io/ru/docs/tasks/tools/install-kubectl/), [`VirtualBox`](https://www.virtualbox.org/), [`Minikube`](https://kubernetes.io/ru/docs/tasks/tools/install-minikube/), [`Helm`](https://helm.sh/)
+запустить minikube:
 
 ```sh
 $ minikube start
@@ -101,7 +104,8 @@ $ minikube start
 
 2) Включите [Ingress](https://habr.com/ru/companies/slurm/articles/358824/)
 
-Выберете и установите нужный Ingress, согласно [документации](https://docs.google.com/spreadsheets/d/191WWNpjJ2za6-nbG4ZoUMXMpUK8KlCIosvQB0f-oq3k/edit#gid=907731238)
+Выберете и установите нужный Ingress,
+согласно [документации](https://docs.google.com/spreadsheets/d/191WWNpjJ2za6-nbG4ZoUMXMpUK8KlCIosvQB0f-oq3k/edit#gid=907731238)
 
 ```sh
 $ minikube addons enable ingress
@@ -115,7 +119,9 @@ $ kubectl apply -f k8s-yaml/ingress_example.yaml
 ```sh
 $ minikube ip
 ```
+
 В файл `hosts` добавить(после этого можно будет заходить на сайт `star-burger.test` вместо цифр):
+
 ```
 ...
 192.168.1.1 star-burger.test www.star-burger.test
@@ -124,7 +130,9 @@ $ minikube ip
 
 4) Загрузите образ `backend_main_django` в [DockerHub](https://hub.docker.com/)
 
-5) Разверните БД в контейнере. Вот [несколько способов](https://yeah366.com/2023/01/How-to-deploy-PostgreSQL-in-Kubernetes/#45_kubectl__PostgreSQL_557) для деплоя. Пример:
+5) Разверните БД в контейнере.
+   Вот [несколько способов](https://yeah366.com/2023/01/How-to-deploy-PostgreSQL-in-Kubernetes/#45_kubectl__PostgreSQL_557)
+   для деплоя. Пример:
 
 ```sh
 $ helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -135,6 +143,7 @@ $ kubectl run psql-test1-postgresql-client --rm --tty -i --restart='Never' --nam
 ```
 
 Создайте БД [Postgres](https://www.postgresql.org/):
+
 ```
 CREATE DATABASE yourdbname;
 CREATE USER youruser WITH ENCRYPTED PASSWORD 'yourpass';
@@ -142,7 +151,9 @@ GRANT ALL PRIVILEGES ON DATABASE yourdbname TO youruser;
 ALTER USER youruser SUPERUSER;
 \conninfo # Скопировать host db
 ```
+
 Данные БД скопировать и заменить в файле `k8s-yaml/secret_example.yaml`. Изменить SecretKey django:
+
 ```
 ...
 DATABASE_URL: "postgres://<youruser>:<yourpass>@<yourhost>:5432/<yourdbname>"
@@ -150,7 +161,8 @@ SECRET_KEY: "REPLACE_me_pls"
 ...
 ```
 
-6) Сохраните [Secret](https://kubernetes.io/docs/concepts/configuration/secret/), примените миграции и задеплойте сервис django:
+6) Сохраните [Secret](https://kubernetes.io/docs/concepts/configuration/secret/), примените миграции и задеплойте сервис
+   django:
 
 ```sh
 $ kubectl apply -f k8s-yaml/configmap_example.yaml
@@ -160,10 +172,28 @@ $ kubectl apply -f k8s-yaml/deploy_example.yaml
 $ kubectl apply -f k8s-yaml/service_example.yaml
 ```
 
-7) Автоматическое удаление сессий Django-приложения(1 числа каждого месяца в 00:00) c помощью [CronJobs](https://tproger.ru/translations/guide-to-cron-jobs):
+7) Автоматическое удаление сессий Django-приложения(1 числа каждого месяца в 00:00) c
+   помощью [CronJobs](https://tproger.ru/translations/guide-to-cron-jobs):
 
 ```sh
 $ kubectl apply -f k8s-yaml/django_clearsession_pod_example.yaml
 ```
 
+## Деплой приложения в [Yandex Cloud](https://console.cloud.yandex.ru/)
 
+[Консоль Яндекс Облака](https://console.cloud.yandex.ru/) -- найти инструкции подключения к выданному кластеру
+через `kubectl` - [Kubectl Reference Docs](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
+
+### Деплой nginx на облако
+
+Изменить `nodePort` в файле `yc-sirius/edu-sleepy-engelbart/service-nginx-deploy.yaml` на нужный, согласно настройкам
+`ALB`, после запустить деплой nginx и сервис для него:
+
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/nginx-deploy.yaml --namespace=edu-sleepy-engelbart
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/service-nginx-deploy.yaml --namespace=edu-sleepy-engelbart
+```
+
+## Цель проекта
+
+Скрипт написан в образовательных целях на онлайн-курсе [Devman](https://dvmn.org)
