@@ -228,6 +228,27 @@ psql "host=c-c9qash3nb1v9********.rw.mdb.yandexcloud.net \
 $ kubectl get secrets <название_secret> -n <имя_namespace> -o jsonpath='{.data.<данные>}' | base64 --decode
 ```
 
+### Как подготовить dev окружение
+
+1) Скачайте [SSL-сертификат](https://cloud.yandex.ru/ru/docs/managed-postgresql/operations/connect#get-ssl-cert):
+```
+mkdir -p ~/.postgresql && \
+wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+     --output-document ~/.postgresql/root.crt && \
+chmod 0600 ~/.postgresql/root.crt
+```
+
+2) Создайте Secret:
+```sh
+$ kubectl create secret generic <secretname> -n <namespace> --from-file=path/to/root.crt
+```
+
+3) Изменить и запустить манифест по созданию контейнера с предустановленным SSL-сертификатом:
+
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/ubuntu.yaml --namespace=edu-sleepy-engelbart
+```
+
 ## Цель проекта
 
 Скрипт написан в образовательных целях на онлайн-курсе [Devman](https://dvmn.org)
