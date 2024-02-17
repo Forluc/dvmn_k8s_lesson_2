@@ -194,6 +194,40 @@ $ kubectl apply -f yc-sirius/edu-sleepy-engelbart/nginx-deploy.yaml --namespace=
 $ kubectl apply -f yc-sirius/edu-sleepy-engelbart/service-nginx-deploy.yaml --namespace=edu-sleepy-engelbart
 ```
 
+### Подключение к защищенному PostgreSQL из ubuntu контейнера
+
+1) Запустите pod с ubuntu и войдите на него:
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/ubuntu.yaml --namespace=edu-sleepy-engelbart
+$ kubectl exec -it ubuntu bash --namespace edu-sleepy-engelbart
+```
+
+2) Получите SSL-сертификат в ubuntu контейнере:
+
+```
+mkdir -p ~/.postgresql && \
+wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+     --output-document ~/.postgresql/root.crt && \
+chmod 0600 ~/.postgresql/root.crt
+```
+
+3) Подключитесь к БД:
+
+```
+psql "host=c-c9qash3nb1v9********.rw.mdb.yandexcloud.net \
+      port=6432 \
+      sslmode=verify-full \
+      dbname=<имя_БД> \
+      user=<имя_пользователя> \
+      target_session_attrs=read-write"
+```
+
+Узнать нужные данные вы можете командой:
+
+```
+$ kubectl get secrets <название_secret> -n <имя_namespace> -o jsonpath='{.data.<данные>}' | base64 --decode
+```
+
 ## Цель проекта
 
 Скрипт написан в образовательных целях на онлайн-курсе [Devman](https://dvmn.org)
