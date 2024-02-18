@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: clearsessions
+  labels:
+    app.kubernetes.io/name: django-app
+spec:
+  schedule: "0 0 1 * *"
+  startingDeadlineSeconds: 15
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: django-app
+        spec:
+          containers:
+          - name   : django-app
+            image  : forluc/django_app
+            env:
+              - name: SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: django-secret
+                    key: SECRET_KEY
+              - name: DATABASE_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: django-secret
+                    key: DATABASE_URL
+              - name: DEBUG
+                valueFrom:
+                  secretKeyRef:
+                    name: django-secret
+                    key: DEBUG
+              - name: ALLOWED_HOSTS
+                valueFrom:
+                  secretKeyRef:
+                    name: django-secret
+                    key: ALLOWED_HOSTS
+            imagePullPolicy: IfNotPresent
+            command:
+            - ./manage.py
+            - clearsessions
+          restartPolicy: OnFailure

@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrations
+  labels:
+    name: django-app
+    component: migrations
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 30
+  template:
+    metadata:
+      labels:
+        name: django-app
+        component: migrations
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrations
+          image: forluc/django_app
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret
+                  key: SECRET_KEY
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret
+                  key: DATABASE_URL
+            - name: DEBUG
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret
+                  key: DEBUG
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret
+                  key: ALLOWED_HOSTS
+          imagePullPolicy: IfNotPresent
+          command:
+            - ./manage.py
+            - migrate

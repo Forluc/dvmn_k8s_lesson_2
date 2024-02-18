@@ -93,10 +93,7 @@ $ docker compose build web
 
 ## Деплой [Kubernetes](https://kubernetes.io/) кластера с помощью [Minikube](https://minikube.sigs.k8s.io/docs/)
 
-1)
-
-Установить [`Kubectl`](https://kubernetes.io/ru/docs/tasks/tools/install-kubectl/), [`VirtualBox`](https://www.virtualbox.org/), [`Minikube`](https://kubernetes.io/ru/docs/tasks/tools/install-minikube/), [`Helm`](https://helm.sh/)
-запустить minikube:
+1) Установить [`Kubectl`](https://kubernetes.io/ru/docs/tasks/tools/install-kubectl/), [`VirtualBox`](https://www.virtualbox.org/), [`Minikube`](https://kubernetes.io/ru/docs/tasks/tools/install-minikube/), [`Helm`](https://helm.sh/), запустить minikube:
 
 ```sh
 $ minikube start
@@ -184,53 +181,33 @@ $ kubectl apply -f k8s-yaml/django_clearsession_pod_example.yaml
 [Консоль Яндекс Облака](https://console.cloud.yandex.ru/) -- найти инструкции подключения к выданному кластеру
 через `kubectl` - [Kubectl Reference Docs](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
 
-### Деплой nginx на облако
+### Инструкция по сборке и публикации докер-образов
 
-Изменить `nodePort` в файле `yc-sirius/edu-sleepy-engelbart/service-nginx-deploy.yaml` на нужный, согласно настройкам
-`ALB`, после запустить деплой nginx и сервис для него:
+- Зарегистрируйтесь и
+  скачайте [Docker](https://www.docker.com/). [Туториал](https://timeweb.cloud/tutorials/docker/kak-ustanovit-docker-na-ubuntu-22-04)
+  на русском.
+- Соберите образ контейнера командой:
 
-```sh
-$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/nginx-deploy.yaml --namespace=edu-sleepy-engelbart
-$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/service-nginx-deploy.yaml --namespace=edu-sleepy-engelbart
+```bash
+$ sudo docker build -t django_app .
 ```
 
-### Подключение к защищенному PostgreSQL из ubuntu контейнера
+- Сделайте тег для пуша:
 
-1) Запустите pod с ubuntu и войдите на него:
-```sh
-$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/ubuntu.yaml --namespace=edu-sleepy-engelbart
-$ kubectl exec -it ubuntu bash --namespace edu-sleepy-engelbart
+```bash
+$ sudo docker tag django_app YOUR-USER-NAME/django_app:<tag>
 ```
 
-2) Получите SSL-сертификат в ubuntu контейнере:
+- Запуште образ на репозиторий [Docker](https://www.docker.com/):
 
-```
-mkdir -p ~/.postgresql && \
-wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
-     --output-document ~/.postgresql/root.crt && \
-chmod 0600 ~/.postgresql/root.crt
-```
-
-3) Подключитесь к БД:
-
-```
-psql "host=c-c9qash3nb1v9********.rw.mdb.yandexcloud.net \
-      port=6432 \
-      sslmode=verify-full \
-      dbname=<имя_БД> \
-      user=<имя_пользователя> \
-      target_session_attrs=read-write"
-```
-
-Узнать нужные данные вы можете командой:
-
-```
-$ kubectl get secrets <название_secret> -n <имя_namespace> -o jsonpath='{.data.<данные>}' | base64 --decode
+```bash
+$ sudo docker push YOUR-USER-NAME/django_app:<tag>
 ```
 
 ### Как подготовить dev окружение
 
-1) Скачайте [SSL-сертификат](https://cloud.yandex.ru/ru/docs/managed-postgresql/operations/connect#get-ssl-cert):
+Скачайте [SSL-сертификат](https://cloud.yandex.ru/ru/docs/managed-postgresql/operations/connect#get-ssl-cert):
+
 ```
 mkdir -p ~/.postgresql && \
 wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
@@ -238,16 +215,44 @@ wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
 chmod 0600 ~/.postgresql/root.crt
 ```
 
-2) Создайте Secret:
+Создайте `Secret`:
+
 ```sh
 $ kubectl create secret generic <secretname> -n <namespace> --from-file=path/to/root.crt
 ```
 
-3) Изменить и запустить манифест по созданию контейнера с предустановленным SSL-сертификатом:
+### Запуск Django-приложения
+
+1) Создайте `Secret` с переменными окружения для django
 
 ```sh
-$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/ubuntu.yaml --namespace=edu-sleepy-engelbart
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/django-secrets.yaml --namespace=edu-sleepy-engelbart
 ```
+
+2) Создайте `Deployment` приложения
+
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/django-deploy.yaml --namespace=edu-sleepy-engelbart
+```
+
+3) Создайте `Service` для приложения, изменив `NodePort` на нужный, согласно настройкам `ALB`
+
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/django-service.yaml --namespace=edu-sleepy-engelbart
+```
+
+4) Примените `миграции` и `автоматическое удаление сессий`:
+
+```sh
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/django-migrate.yaml --namespace=edu-sleepy-engelbart
+$ kubectl apply -f yc-sirius/edu-sleepy-engelbart/django-clearsession.yaml --namespace=edu-sleepy-engelbart
+```
+
+Ознакомиться с сайтом можно по
+ссылке: [edu-sleepy-engelbart.sirius-k8s.dvmn.org](https://edu-sleepy-engelbart.sirius-k8s.dvmn.org/)
+
+Серверная
+инфраструктура: [edu-sleepy-engelbart](https://sirius-env-registry.website.yandexcloud.net/edu-sleepy-engelbart.html)
 
 ## Цель проекта
 
